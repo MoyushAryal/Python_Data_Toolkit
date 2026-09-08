@@ -25,11 +25,20 @@ class Record:
     city:str
     score: float
 
+    # def Validity(self):
+    #     if(self.id == "" or self.name == "" or self.age == "" or self.city == "" or self.score == ""):
+    #         return False
+    #     else:
+    #         return True
+
+
+# A more clean and standard format validity banauna
+
     def Validity(self):
-        if(self.id == "" or self.name == "" or self.age == "" or self.city == "" or self.score == ""):
-            return False
-        else:
-            return True
+        values = [self.id,self.name,self.age,self.city,self.score]
+        
+        return not any(value == "" for value in values)
+
 
 
 recordObjList = []
