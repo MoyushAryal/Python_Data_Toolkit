@@ -25,7 +25,7 @@ class Record:
 
 
 
-class dataset:
+class Dataset:
     def __init__(self,filename):
         with open(filename, "r") as csvfile:
             csv_reader = csv.DictReader(csvfile)
@@ -122,3 +122,9 @@ class dataset:
 # Create Record objects
 recordObjList = []
 
+dataset = Dataset("messy_people (1).csv")
+
+dataset.clean()
+
+for record in dataset.stream():
+    print(record)

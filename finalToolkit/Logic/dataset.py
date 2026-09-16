@@ -1,47 +1,9 @@
 import csv
-import time
-
-from dataclasses import dataclass
 from statistics import mean
 
-
-with open("messy_people (1).csv", "r") as csvfile:
-    csv_reader = csv.DictReader(csvfile)
-    data = list(csv_reader)
-
-
-
-
-
-def log_time(func):
-
-    def wrapping_function(*args):
-        timer_start = time.perf_counter()
-        result = func(*args)
-        end = time.perf_counter()
-        time_taken = end-timer_start
-
-        print(f"{func.__name__} took {time_taken} seconds")
-
-        return result
-    return wrapping_function
-
-
-
-@dataclass
-class Record:
-    id: int
-    name: str
-    age: int
-    city: str
-    score: float
-
-    def Validity(self):
-        values = [self.id, self.name, self.age, self.city, self.score]
-        return not any(value == "" for value in values)
-
-
-
+from .models import Record
+from Tools.decorators import log_time
+from Tools.word_to_number import word_to_number
 
 class Dataset:
     def __init__(self,filename):
@@ -49,6 +11,16 @@ class Dataset:
             csv_reader = csv.DictReader(csvfile)
             data = list(csv_reader)
             records= []
+            self.rows_loaded = 0
+            self.rows_dropped = 0
+            self.invalid_ages = 0
+            self.invalid_ids = 0
+            self.duplicate_ids = 0
+            self.word_ages = 0
+            self.missing_scores = 0
+            self.missing_names = 0
+            self.missing_cities = 0
+            self.blank_rows = 0
 
             for i in data:
                 obj = Record(
@@ -60,6 +32,7 @@ class Dataset:
                 )
                 records.append(obj)
             self.records = records
+            self.rows_loaded = len(self.records)
 
 
     def clean(self):
@@ -69,6 +42,8 @@ class Dataset:
 
         for i in self.records:
             if i.age == "" and i.score == "" and i.id == "" and i.name == "" and i.city == "":
+                self.rows_dropped += 1
+                self.blank_rows +=1
                 continue
 
             valid_records.append(i)
@@ -81,7 +56,15 @@ class Dataset:
                 i.age = int(i.age)
                 valid_age_records.append(i)
             except ValueError:
-                continue
+                age = i.age.strip().lower()
+                if age in word_to_number:
+                    i.age = word_to_number[age]
+                    self.word_ages += 1
+                    valid_age_records.append(i)
+                else:
+                    self.invalid_ages += 1 
+                    self.rows_dropped += 1
+                    continue
 
         # Find the mean of valid scores
         scores = []
@@ -102,6 +85,7 @@ class Dataset:
                 i.score = float(i.score)
             except ValueError:
                 i.score = mean_number
+                self.missing_scores += 1
 
             valid_score_records.append(i)
 
@@ -114,18 +98,24 @@ class Dataset:
             try:
                 i.id = int(i.id)
             except ValueError:
+                self.invalid_ids += 1 
+                self.rows_dropped += 1
                 continue
 
             if i.id in seen_ids:
+                self.duplicate_ids += 1 
+                self.rows_dropped += 1
                 continue
 
             seen_ids.add(i.id)
 
             if i.name == "":
                 i.name = "Unknown"
+                self.missing_names += 1
 
             if i.city == "":
                 i.city = "Unknown"
+                self.missing_cities += 1
 
             cleaned_records.append(i)
 
@@ -155,18 +145,7 @@ class Dataset:
 
         return cities
 
-    # def oldest(self):
-    #     age =[]
-    #     for i in self.records:
-    #         age.append(i.age)
-    #     return max(age)
-    # def youngest(self):
-    #     age =[]
-    #     for i in self.records:
-    #         age.append(i.age)
-    #     return min(age)
 
-    # if in case user wants to later acces the info of oldest or youngest
     @log_time
     def oldest(self):
         return max(self.records,key = lambda i:i.age)
@@ -176,20 +155,4 @@ class Dataset:
         return min(self.records,key = lambda i:i.age)
 
 
-
-
-
-
-
-
-
-dataset = Dataset("messy_people (1).csv")
-dataset.clean()
-
-
-
-
-print(dataset.people_per_city())
-print(dataset.average_score())
-print(dataset.oldest())
-print(dataset.youngest())
+  

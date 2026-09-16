@@ -1,13 +1,12 @@
 import csv
 import time
 
+from finalToolkit.word_to_number import word_to_number
 from dataclasses import dataclass
 from statistics import mean
 
 
-with open("messy_people (1).csv", "r") as csvfile:
-    csv_reader = csv.DictReader(csvfile)
-    data = list(csv_reader)
+
 
 
 
@@ -49,6 +48,15 @@ class Dataset:
             csv_reader = csv.DictReader(csvfile)
             data = list(csv_reader)
             records= []
+            self.rows_loaded = 0
+            self.rows_dropped = 0
+            self.invalid_ages = 0
+            self.invalid_ids = 0
+            self.duplicate_ids = 0
+            self.word_ages = 0
+            self.missing_scores = 0
+            self.missing_names = 0
+            self.missing_cities = 0
 
             for i in data:
                 obj = Record(
@@ -69,6 +77,7 @@ class Dataset:
 
         for i in self.records:
             if i.age == "" and i.score == "" and i.id == "" and i.name == "" and i.city == "":
+                self.rows_dropped += 1
                 continue
 
             valid_records.append(i)
@@ -81,7 +90,15 @@ class Dataset:
                 i.age = int(i.age)
                 valid_age_records.append(i)
             except ValueError:
-                continue
+                age = i.age.strip().lower()
+                if age in word_to_number:
+                    i.age = word_to_number[age]
+                    self.word_ages += 1
+                    valid_age_records.append(i)
+                else:
+                    self.invalid_ages += 1 
+                    self.rows_dropped += 1
+                    continue
 
         # Find the mean of valid scores
         scores = []
@@ -102,6 +119,7 @@ class Dataset:
                 i.score = float(i.score)
             except ValueError:
                 i.score = mean_number
+                self.missing_scores += 1
 
             valid_score_records.append(i)
 
@@ -114,18 +132,24 @@ class Dataset:
             try:
                 i.id = int(i.id)
             except ValueError:
+                self.invalid_ids += 1 
+                self.rows_dropped += 1
                 continue
 
             if i.id in seen_ids:
+                self.duplicate_ids += 1 
+                self.rows_dropped += 1
                 continue
 
             seen_ids.add(i.id)
 
             if i.name == "":
                 i.name = "Unknown"
+                self.missing_names += 1
 
             if i.city == "":
                 i.city = "Unknown"
+                self.missing_cities += 1
 
             cleaned_records.append(i)
 
@@ -188,7 +212,8 @@ dataset.clean()
 
 
 
-
+for record in dataset.stream():
+    print(record)
 print(dataset.people_per_city())
 print(dataset.average_score())
 print(dataset.oldest())
