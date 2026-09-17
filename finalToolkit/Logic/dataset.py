@@ -49,23 +49,42 @@ class Dataset:
             valid_records.append(i)
 
         # Convert age to int and remove records with invalid age
+       # Convert age to int, convert word ages, and find mean age
+
+        ages = []
+
+        for i in valid_records:
+            try:
+                i.age = int(i.age)
+                ages.append(i.age)
+
+            except ValueError:
+                age = i.age.strip().lower()
+
+                if age in word_to_number:
+                    i.age = word_to_number[age]
+                    self.word_ages += 1
+                    ages.append(i.age)
+
+
+        mean_age = round(mean(ages))
+
+
         valid_age_records = []
 
         for i in valid_records:
             try:
                 i.age = int(i.age)
-                valid_age_records.append(i)
             except ValueError:
                 age = i.age.strip().lower()
+
                 if age in word_to_number:
                     i.age = word_to_number[age]
-                    self.word_ages += 1
-                    valid_age_records.append(i)
                 else:
-                    self.invalid_ages += 1 
-                    self.rows_dropped += 1
-                    continue
+                    i.age = mean_age
+                    self.invalid_ages += 1
 
+            valid_age_records.append(i)
         # Find the mean of valid scores
         scores = []
 
@@ -153,6 +172,3 @@ class Dataset:
     @log_time
     def youngest(self):
         return min(self.records,key = lambda i:i.age)
-
-
-  
